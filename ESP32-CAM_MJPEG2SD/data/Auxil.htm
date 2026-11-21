@@ -1,0 +1,1157 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>ESP32-CAM Вспомогательная Плата</title>
+    <link rel="icon" href='data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y="80" font-size="80">📷</text></svg>'>
+    <style>
+      :root {
+        --buttonReady: crimson;
+        --buttonActive: ForestGreen;
+        --buttonHover: green;
+        --buttonText: white;
+        --buttonLabel: black;
+        --itemInactive: gray;
+        --menuBackground: transparent;
+        --inputText: navy;
+        --pageText: WhiteSmoke;
+        --inputBackground: WhiteSmoke;
+        --alertMsg: orange;
+        --itemBorder: silver;
+        --pageBackground:#181818;
+        --warnColor: orange;
+        --errColor: red;
+        --chkColor: green;
+        --dbgColor: blue;
+        --bodySize:1rem;
+        --buttonSize: var(--bodySize);
+        --buttonHalf: calc(var(--buttonSize) / 2);
+        --buttonQuart: calc(var(--buttonSize) / 4);
+        --buttonDbl: calc(var(--buttonSize) * 2);
+        --inputSize: calc(var(--bodySize) * 0.9);
+        --headingSize: calc(var(--bodySize) * 1.25);
+        --subheadingSize: var(--bodySize);
+        --footerSize: calc(var(--bodySize) * 0.7);
+        --smallThumbSize: 1rem;
+        --bigThumbSize: 2rem;
+        --markerSize: 1rem;
+      }
+      html body {height: 100%;}
+      body {
+        font-family: Helvetica  !important;
+        background: var(--pageBackground);
+        color: var(--pageText);
+        font-size: var(--bodySize);
+      }
+      .hidden {
+        display: none;
+      }
+      progress {
+        accent-color: var(--buttonActive);
+        width: calc(var(--buttonSize) * 15);
+      }
+      .fixed {
+        position: fixed;
+        top: 0;
+      }
+      .alertMsg {
+        left:10%;
+        bottom: var(--buttonDbl);
+        position:absolute;
+        display:block;
+        color:var(--alertMsg);
+        z-index:20;
+        height: var(--buttonDbl);
+      }
+      .header {
+        font-size: var(--headingSize);
+        padding-left: var(--buttonHalf);
+        font-weight:bold;
+      }
+      .subheader {
+        font-style: italic;
+        font-size: var(--subheadingSize);
+        padding-left: var(--buttonQuart);
+      }
+      .tab {
+        display: flex;
+        overflow: hidden;
+        background: var(--menuBackground);
+      }
+      .tab button {
+        background: var(--buttonReady);
+        float: left;
+        border: none;
+        outline: none;
+        cursor: pointer;
+        padding: var(--buttonHalf);
+        transition: 0.3s;
+        font-size: calc(var(--buttonSize) * 1.1);
+      }
+      .tab button.active {
+        box-shadow: 0 0 0 var(--buttonQuart) var(--buttonActive);
+        background: var(--buttonActive);
+      }
+      .tab button.hover {
+        background: var(--buttonHover);
+      }
+      .tab button.disabled {
+        cursor: default;
+        background: var(--itemInactive)
+      }
+      .tabcontent {
+        display: none;
+      }
+      .grid-cols3 {
+        grid-template-columns: calc(var(--buttonSize) * 14) calc(var(--buttonSize) * 12) calc(var(--buttonSize) * 12);
+      }
+      .grid-cols4 {
+        grid-template-columns: calc(var(--buttonSize) * 10) calc(var(--buttonSize) * 10) calc(var(--buttonSize) * 10) calc(var(--buttonSize) * 10)
+      }
+      .grid-cols3, .grid-cols4 {
+        display: grid;
+        background: none;
+        text-align: center;
+        font-size: var(--inputSize);
+        fill: var(--buttonLabel);
+        border: 0px solid var(--itemBorder);
+        dominant-baseline: middle;
+        text-anchor: middle;
+      }
+      .cfgTitle {
+        grid-column: 1/5;
+        text-align: left;
+      }
+      svg {
+        width: calc(var(--buttonSize) * 8);
+        height: var(--buttonDbl);
+      }
+      rect {
+        fill: var(--buttonReady);
+        width: 100%;
+        height: 100%;
+        x: 0;
+        y: 0;
+        ry: 15%;
+      }
+      .buttonRect:focus {
+        fill: var(--buttonActive);
+        outline: none;
+      }
+      rect:hover{
+        fill: var(--buttonHover);
+      }
+      text {
+        font-size: var(--buttonSize);
+        fill: var(--buttonText);
+        transform: translate(50%, 50%);
+        pointer-events: none;
+      }
+      .panel {
+        padding: 0 var(--buttonSize);
+        display: none;
+        background-color: var(--pageBackground);
+        overflow: hidden;
+      }
+      button {
+        display: block;
+        margin: var(--buttonQuart);
+        padding: var(--buttonQuart);
+        border: 0;
+        line-height: var(--headingSize);
+        cursor: pointer;
+        color: var(--buttonText);
+        background: var(--buttonReady);
+        border-radius: var(--buttonQuart);
+        font-size: var(--buttonSize);
+        outline: 0
+      }
+      button:active {
+       box-shadow: 0 0 0 var(--buttonQuart) var(--buttonActive);
+       background: var(--buttonActive);
+      }
+      button:hover {
+        background: var(--buttonHover);
+      }
+      button:disabled {
+        cursor: default;
+        background: var(--itemInactive)
+      }
+      .input-group {
+        position: relative;
+        display: flex;
+        flex-wrap: nowrap;
+        line-height: var(--buttonDbl);
+        margin-top: var(--buttonHalf);
+      }
+      .input-group>label {
+        display: inline-block;
+        padding-right: var(--buttonHalf);
+        min-width: 40%;
+      }
+      .input-group>input {
+        width: 100%;
+      }
+      .input-group input,.input-group select {
+        flex-grow: 1
+      }
+      input {
+        height: calc(var(--inputSize) * 1.5);
+        border-radius: var(--buttonQuart);
+      }
+      input, #appLog {
+        font: var(--inputSize) 'Courier New';
+        font-weight:bold;
+        color: var(--inputText);
+        background: var(--inputBackground);
+        min-width: calc(var(--buttonSize) * 10);
+      }
+      input[type="radio"], input[type="checkbox"], progress {
+        accent-color: var(--buttonActive);
+      }
+      input[type="text"]{
+        font-size: var(--inputSize);
+        width: calc(var(--buttonSize) * 6);
+      }
+      input[type="checkbox"] {
+        width : calc(var(--inputSize) * 1.5);
+        height : calc(var(--inputSize) * 1.5);
+        margin-top: calc(var(--buttonQuart) * -1);
+      }
+      input[type="radio"] {
+        width: var(--inputSize);
+        height: var(--inputSize);
+        min-width: var(--buttonSize);
+      }
+      input[type="number"] {
+        height: var(--buttonSize);
+      }
+      input[type=number]::-webkit-inner-spin-button {
+        opacity: 1;
+      }
+      input[type="button"]:focus {
+        background-color: var(--buttonActive);
+      }
+      #appLog {
+        height:50vh;
+        width:90%;
+        border:2px solid var(--itemBorder);
+        overflow:auto;
+        background: var(--inputBackground);
+      }
+      select {
+        border: 1px solid var(--menuBackground);
+        font-size: var(--inputSize);
+        outline: 0;
+        border-radius: var(--buttonQuart);
+        margin-top: 2px;
+      }
+      .selectField {
+         height: calc(var(--inputSize) * 1.5);
+      }
+      table {
+        border-collapse:collapse;
+        table-layout:fixed;
+        background: var(--menuBackground);
+        text-align: left;
+      }
+      th, td {
+        font-weight:bold;
+      }
+      .config-group th, .config-group td {
+        border: 0;
+        padding: var(--buttonHalf) var(--buttonHalf) 0 var(--buttonHalf);
+        padding-left: var(--buttonSize);
+        line-height: var(--buttonDbl);
+        font-size: var(--buttonSize);
+      }
+      .configGroup td input[type="number"] {
+        font-size: var(--buttonSize);
+      }
+      input.configItem[type="radio"] {
+        min-width: var(--buttonSize);
+      }
+      input.configItem[type="number"] {
+        min-width: calc(var(--buttonSize) * 3);
+        width: calc(var(--buttonSize) * 3);
+      }
+      .svgCols {
+        width: calc(var(--buttonSize) * 9);
+        height: calc(var(--buttonSize) * 2.5);
+        fill: var(--buttonLabel);
+        font-size: calc(var(--buttonSize) * 1.5);
+      }
+      .svgIcon {
+        width: var(--buttonDbl);
+        height: var(--buttonDbl);
+      }
+      rect.RCon {
+        fill: var(--buttonActive);
+      }
+      rect.RCoff {
+        fill: var(--buttonReady);
+      }
+      .upperText {
+        transform: translate(50%,30%);
+      }
+      .lowerText {
+        transform: translate(50%,70%);
+      }
+      .midText {
+        transform: translate(50%,50%);
+      }
+      .input-group>input[type=range]  {
+        min-width: calc(var(--markerSize) * 8);
+      }
+      input[type=range] {
+        -webkit-appearance: none;
+        appearance: none;
+        background: transparent;
+      }
+      input[type=range]::-webkit-slider-runnable-track {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 100%;
+        height: 2px;
+        background: var(--inputBackground);
+        margin-top: 2px;
+      }
+      input[type=range]::-webkit-slider-thumb {
+        height: var(--smallThumbSize);
+        width: var(--smallThumbSize);
+        border-radius: 50%;
+        background: var(--buttonReady);
+        -webkit-appearance: none;
+        appearance: none;
+        margin-top: calc(-0.5 * var(--smallThumbSize));
+      }
+      input[type=range].bigThumb::-webkit-slider-thumb{
+        height: var(--bigThumbSize);
+        width: var(--bigThumbSize);
+        margin-top: calc(-0.5 * var(--bigThumbSize));
+      }
+      div[name="rangeVal"] {
+        width: calc(var(--markerSize) * 2);
+        height: var(--markerSize);
+        margin-top: calc(-0.5 * var(--smallThumbSize));
+        line-height: var(--markerSize);
+        text-align: center;
+        background: var(--buttonReady);
+        color: var(--buttonText);
+        font-size: var(--footerSize);
+        display: inline;
+        position: absolute;
+        border-radius: 25%;
+        pointer-events: none;
+      }
+      div[name="rangeVal"].rvThumb {
+        margin-top: calc(-0.5 * var(--bigThumbSize) - var(--buttonQuart));
+      }
+      div[name="rangeMin"], div[name="rangeMax"] {
+        display: inline-block;
+        padding: 0 var(--buttonQuart);
+        pointer-events: none;
+      }
+      .switch input[type="checkbox"] {
+        display: none;
+      }
+      .switch .slider {
+        width: calc(var(--buttonSize) * 3);
+        height: var(--buttonSize);
+        top: calc(var(--buttonQuart) / 2);
+        background: var(--itemInactive);
+        position: relative;
+        display: inline-block;
+        border-radius: var(--buttonSize);
+      }
+      .switch input[type="checkbox"]:checked + .slider {
+        background-color: var(--buttonActive);
+      }
+      .switch .slider::before {
+        content: "";
+        height: var(--buttonSize);
+        width: var(--buttonSize);
+        background: var(--inputBackground);
+        position: absolute;
+        left: var(--buttonQuart);
+        border-radius: var(--buttonSize);
+        transition: transform 0.4s;
+      }
+      .switch input[type="checkbox"]:checked + .slider::before {
+        transform: translateX(calc(var(--buttonSize)*1.5));
+      }
+      .navtop{
+        list-style: none;
+        border: 1px solid var(--itemBorder);
+        border-radius: var(--buttonQuart);
+        padding: var(--buttonQuart);
+        margin-top: var(--buttonHalf);
+      }
+      .navtop li {
+       float: left;
+       position: relative;
+      }
+      nav.menu {
+        display: grid;
+        flex-direction: column;
+        flex-wrap: nowrap;
+        min-width: calc(var(--buttonSize) * 20);
+        background: var(--menuBackground);
+        padding: var(--buttonHalf);
+        border-radius: 0 var(--buttonQuart) var(--buttonQuart) var(--buttonQuart);
+        margin-bottom: var(--buttonQuart);
+        border: 1px solid var(--itemBorder);
+      }
+      nav.menu.buttons {
+        min-width: calc(var(--buttonSize) * 25);
+      }
+      nav.menu.panel {
+        display: none;
+        min-height: calc(var(--buttonSize) * 20);
+      }
+      nav.menu.panel.active {
+        display: block;
+      }
+      nav.quick-nav {
+        width: var(--buttonDbl);
+        height: var(--buttonDbl);
+        margin: var(--buttonHalf) var(--buttonHalf) var(--buttonHalf) var(--buttonHalf);
+        border: 1px solid var(--itemBorder);
+        border-radius: var(--buttonQuart);
+        cursor: pointer;
+        font-size: calc(var(--buttonSize) * 1.5);
+        padding: var(--buttonQuart) var(--buttonQuart) var(--buttonQuart) var(--buttonQuart);
+        background: var(--buttonReady);
+      }
+      nav.quick-nav:hover {
+        background: var(--buttonHover);
+      }
+      nav.quick-nav.active {
+        box-shadow: 0 0 0 var(--buttonQuart) var(--buttonActive);
+        background: var(--buttonActive);
+      }
+      nav#maintoolbar {
+        display: flex;
+        flex-wrap: nowrap;
+        justify-content: flex-end;
+        overflow: auto;
+      }
+      .nav-toggle {
+        margin: 0 0 var(--buttonQuart) var(--buttonQuart);
+        font-size:var(--headingSize);
+        display: block;
+        margin-bottom: calc(var(--buttonSize) * 3/4);
+        padding-bottom: var(--buttonHalf);
+        border-bottom: 1px solid var(--itemBorder);
+      }
+      section#main {
+        display: flex;
+        flex-direction: column;
+      }
+      section#header {
+        min-width: calc(var(--buttonSize) * 20);
+        background: var(--menuBackground);
+        margin-bottom: 2px;
+        padding: 1px 1px;
+        display: flex;
+        flex-wrap: wrap;
+        border-radius: 2px;
+        justify-content: space-between;
+      }
+      section#title{
+        display: flex;
+      }
+      section#footer {
+        position: fixed;
+        bottom: 0;
+        width: 97%;
+        min-width: calc(var(--buttonSize) * 20);
+        background: var(--menuBackground);
+        margin-top: 0px;
+        padding: var(--buttonQuart) var(--buttonHalf);
+        display: flex;
+        flex-wrap: wrap;
+        border-radius: var(--buttonQuart) var(--buttonQuart) 0 0;
+        justify-content: space-between;
+        font-size: var(--footerSize);
+        z-index: -1;
+        border-top: 1px solid var(--itemBorder);
+        border-left: 1px solid var(--itemBorder);
+        border-right: 1px solid var(--itemBorder);
+        border-bottom: none;
+        text-align: center;
+      }
+      section#buttons {
+        display: flex;
+        flex-wrap: nowrap;
+        justify-content: center;
+      }
+      #foot-spacer {
+        height: calc(var(--buttonSize) * 4);
+      }
+      .info-group {
+        position: relative;
+        margin: var(--buttonQuart) 0;
+      }
+      .info{
+        margin-top: 2px;
+      }
+      .info-group label {
+        color: var(--itemInactive);
+      }
+      .menu-action {
+        display: none;
+      }
+      .menu-action + label + div {
+        padding: var(--buttonHalf) 0 0 0;
+        margin: var(--buttonQuart) 0 0 0;
+        border-top: 1px solid var(--itemBorder);
+      }
+      .menu-action:not(:checked) + label + div {
+        display: none;
+      }
+      .sep {
+        border: 1px solid var(--itemBorder);
+        height: var(--buttonDbl);
+        margin: var(--buttonQuart) var(--buttonQuart) 0 var(--buttonQuart);
+      }
+      .vsep {
+        border: 1px solid var(--itemBorder);
+        margin: var(--buttonHalf) 2px;
+      }
+      #menu-top.menu-floating nav.menu.panel {
+        border-radius: 0 var(--buttonQuart) var(--buttonQuart) var(--buttonQuart);
+      }
+      #menu-top.menu-pinned nav.menu.panel {
+        border-radius: var(--buttonQuart) var(--buttonQuart) var(--buttonQuart);
+        height: 110%;
+        left: -1px;
+        position: relative;
+      }
+      #menu-container {
+        position: relative;
+        min-width: calc(var(--buttonSize) * 4);
+        min-height: calc(var(--buttonSize) * 20);
+        border-radius: var(--buttonQuart);
+        left:var(--buttonQuart);
+        top: var(--buttonQuart);
+      }
+      #menu-container.menu-floating {
+        display: table;
+      }
+      #menu-container.menu-pinned {
+        display: flex;
+      }
+      #menu-top {
+        display: inline-grid;
+      }
+      #menu-top.menu-floating {
+        position: absolute;
+        left: calc(var(--buttonSize) * 4);
+        z-index: 2;
+      }
+      #menu-top.menu-pinned {
+        position: initial;
+        left: initial;
+        float: left;
+        z-index: 4;
+        border-left: none;
+      }
+      #menu-selector {
+        z-index: 4;
+        background: var(--menuBackground);
+        width: calc(var(--buttonSize) * 4);
+      }
+      #menu-selector.menu-floating {
+        position: absolute;
+      }
+      #menu-selector.menu-pinned {
+        position: relative;
+        float: left;
+        height: 100%;
+        border-right: none;
+        z-index: 5;
+      }
+      .menu-floating.menu-open {
+        border-radius: var(--buttonQuart) 0 0 var(--buttonQuart);
+        border: 1px solid var(--itemBorder);
+        border-right: none;
+      }
+      .menu-floating.menu-closed {
+        border-radius: var(--buttonQuart);
+        border: 1px solid var(--itemBorder);
+      }
+      .menu-pinned.menu-open {
+        border-radius: var(--buttonQuart) 0 0 var(--buttonQuart);
+        border: 1px solid var(--itemBorder);
+      }
+      .menu-pinnded.menu-closed {
+        border-radius: var(--buttonQuart);
+        border: 1px solid var(--itemBorder);
+      }
+      .pin-menu {
+        width: calc(var(--buttonSize) * 3/2);
+        height: calc(var(--buttonSize) * 3/2);
+        float: right;
+        cursor: pointer;
+      }
+      .displayonly {
+        pointer-events: none;
+      }
+      .blinking {
+        animation: blinker 1.5s linear infinite;
+      }
+      @keyframes blinker {
+        50% {
+          opacity: .4;
+        }
+      }
+      figure {
+        padding: 0px;
+        margin: 0;
+        width: 100%;
+        height: auto;
+        margin-block-start: 0;
+        margin-block-end: 0;
+        margin-inline-start: 0;
+        margin-inline-end: 0;
+      }
+      .image-container {
+        position: relative;
+      }
+      figure img {
+        display: block;
+        width: 100%;
+        height: 100%;
+        border-radius: var(--buttonQuart);
+      }
+      #content {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: stretch
+      }
+      #sidebar{
+        margin: 0px;
+        padding: 0px;
+        width: 100%;
+      }
+      @media (min-width: 50rem) and (orientation:landscape) {
+        #content {
+          display:flex;
+          flex-wrap: nowrap;
+          align-items: stretch
+        }
+        #sidebar {
+          width: auto;
+        }
+      }
+      fieldset {
+        margin: 0px;
+      }
+      #buttonContainer {
+        margin-bottom: calc(var(--buttonSize) * 4);
+        display: flex;
+        align-items: center;
+      }
+      .touchDisabled {
+        touch-action: none;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="tab">
+      <ul class="navtop">
+        <button class="tablinks camTab active" name="mainPage">Вспомогательная</button>
+        <button class="tablinks" name="ShowLog">Показать Лог</button>
+        <button class="tablinks" name="EditConfig">Настройки</button>
+        <a href="/web?OTA.htm"><button class="tablinks">OTA Загрузка</button></a>
+      </ul>
+    </div>
+    <div id="mainPage" class="tabcontent" style="display:block">
+      <div id="content">
+        <div id="mainPageIcons">
+          <div id="sidebar">
+            <div id="menu-container" class="menu-pinned">
+              <nav id="menu-selector" class="menu-pinned menu-closed">
+                <nav class="quick-nav" id="accSettings" name="access-settings">🔧</nav>
+              </nav>
+              <nav class="menu panel" id="access-settings">
+                <input type="checkbox" id="other-cb" class="menu-action">
+                <div class="pin-menu" title="Закрепить/открепить меню">📌</div>
+                <label for="other-cb" class="nav-toggle">🔧&nbsp;&nbsp;Настройки доступа&nbsp;&nbsp;</label>
+                <div class='addButtons'></div>
+                <div>
+                  <div class="subheader">Настройки сети</div>
+                  <div class="input-group" id="wifi-group" style="margin-top:0">
+                    <label for="netMode">Тип Сети</label>
+                    <select id="netMode" class="selectField">
+                      <option value="0">WiFi</option>
+                      <option value="1">Ethernet</option>
+                      <option value="2">Эт+AP</option>
+                    </select>
+                  </div>
+                  <div class="input-group" id="wifi-group">
+                    <label for="hostName">Имя Узла</label>
+                    <input id="hostName" name="hostName" length=32 placeholder="Имя узла">
+                  </div>
+                  <div class="input-group wifi-only" id="wifi-group">
+                    <label for="ST_SSID">SSID</label>
+                    <input id="ST_SSID" name="ST_SSID" length=32 placeholder="SSID роутера">
+                  </div>
+                  <div class="input-group wifi-only" id="wifi-group">
+                    <label for="ST_Pass">Пароль</label>
+                    <input id="ST_Pass" name="ST_Pass" length=64 placeholder="Пароль роутера">
+                  </div>
+                  <div class="input-group">
+                      <label for="extIP">Внешний&nbsp;IP</label>
+                      <div id="extIP" class="displayonly">&nbsp;</div>
+                  </div>
+                  <br>
+                  <div class="subheader">Настройки часов</div>
+                  <div class="input-group" id="time-group">
+                    <label for="timezone">Часовой пояс</label>
+                    <input id="timezone" name="timezone" length=64 placeholder="Строка часового пояса">
+                  </div>
+                  <div class="input-group" id="time-group">
+                    <label for="timezoneSel">Выбор часового пояса</label>
+                    <select id="timezoneSel" name="timezoneSel" class="selectField">
+                      <option value="" selected>&nbsp;-- Выбрать --</option>
+                      <option value="EET-2EEST-3,M3.5.0/03:00:00,M10.5.0/04:00:00">Europe/Athens</option>
+                      <option value="GMT0BST,M3.5.0/1,M10.5.0">Europe/Belfast</option>
+                      <option value="CET-1CEST,M3.5.0,M10.5.0/3">Europe/Berlin</option>
+                      <option value="GMT0BST,M3.5.0/1,M10.5.0">Europe/London</option>
+                      <option value="CET-1CEST,M3.5.0,M10.5.0/3">Europe/Paris</option>
+                      <option value="CET-1CEST,M3.5.0,M10.5.0/3">Europe/Rome</option>
+                      <option value="CET-1CEST,M3.5.0,M10.5.0/3">Europe/Zurich</option>
+                      <option value="<-12>12">GMT-12:00</option>
+                      <option value="<-11>11">GMT-11:00</option>
+                      <option value="<-10>10">GMT-10:00</option>
+                      <option value="<-09>9">GMT-9:00</option>
+                      <option value="<-08>8">GMT-8:00</option>
+                      <option value="<-07>7">GMT-7:00</option>
+                      <option value="<-06>6">GMT-6:00</option>
+                      <option value="<-05>5">GMT-5:00</option>
+                      <option value="<-04>4">GMT-4:00</option>
+                      <option value="<-03>3">GMT-3:00</option>
+                      <option value="<-02>2">GMT-2:00</option>
+                      <option value="<-01>1">GMT-1:00</option>
+                      <option value="GMT0">Время по Гринвичу+0:00</option>
+                      <option value="<+01>-1">GMT+1:00</option>
+                      <option value="<+02>-2">GMT+2:00</option>
+                      <option value="<+03>-3">GMT+3:00</option>
+                      <option value="<+04>-4">GMT+4:00</option>
+                      <option value="<+05>-5">GMT+5:00</option>
+                      <option value="<+06>-6">GMT+6:00</option>
+                      <option value="<+07>-7">GMT+7:00</option>
+                      <option value="<+08>-8">GMT+8:00</option>
+                      <option value="<+09>-9">GMT+9:00</option>
+                      <option value="<+10>-10">GMT+10:00</option>
+                      <option value="<+11>-11">GMT+11:00</option>
+                      <option value="<+12>-12">GMT+12:00</option>
+                    </select>
+                  </div>
+                  <br>
+                  <div class="subheader">Настройки FTP / HTTPS</div>
+                  <div class="input-group" id="ftp-group">
+                    <label for="fsServer">Файловый Сервер</label>
+                    <input id="fsServer" name="fsServer" length=32 placeholder="Имя файлового сервера">
+                  </div>
+                  <div class="input-group" id="ftp-group">
+                    <label for="fsPort">Порт ФС</label>
+                    <input id="fsPort" name="fsPport" length=6 placeholder="Порт файлового сервера">
+                  </div>
+                  <div class="input-group" id="ftp-group">
+                    <label for="ftpUser">Имя пользователя FTP</label>
+                    <input id="ftpUser" name="ftpUser" length=32 placeholder="Имя пользователя FTP">
+                  </div>
+                  <div class="input-group" id="ftp-group">
+                    <label for="FS_Pass">Пароль ФС</label>
+                    <input id="FS_Pass" name="FS_Pass" length=32 placeholder="Пароль файлового сервера">
+                  </div>
+                  <div class="input-group" id="ftp-group">
+                    <label for="fsWd">Корневая папка ФС</label>
+                    <input id="fsWd" name="fsWd" length=64 placeholder="Путь к рабочей директории">
+                  </div>
+                  <div class="input-group" id="ftp-group">
+                    <label for="fsUse">Метод загрузки:</label>FTP&nbsp;
+                    <div class="switch">
+                      <input id="fsUse" type="checkbox">
+                      <label title="Загружать файл используя FTP или HFS" class="slider" for="fsUse"></label>
+                    </div>&nbsp;HFS
+                  </div>
+                  <br>
+                  <div class="subheader">Настройки SMTP</div>
+                  <div class="input-group" id="smtp-group">
+                    <label for="smtp_server">SMTP-сервер</label>
+                    <input id="smtp_server" name="smtp_server" length=32 placeholder="Имя SMTP сервера">
+                  </div>
+                  <div class="input-group" id="smtp-group">
+                    <label for="smtp_port">Порт SMTP</label>
+                    <input id="smtp_port" name="smtp_port" length=6 placeholder="Порт SMTP">
+                  </div>
+                  <div class="input-group" id="smtp-group">
+                    <label for="smtp_login">SMTP логин</label>
+                    <input id="smtp_login" name="smtp_login" length=32 placeholder="Email для SMTP логина">
+                  </div>
+                  <div class="input-group" id="smtp-group">
+                    <label for="SMTP_Pass">Пароль SMTP</label>
+                    <input id="SMTP_Pass" name="SMTP_Pass" length=32 placeholder="Пароль SMTP">
+                  </div>
+                  <div class="input-group" id="ftp-group">
+                    <label for="smtp_email">SMTP-электронная почта</label>
+                    <input id="smtp_email" name="smtp_email" length=64 placeholder="Email получателя">
+                  </div>
+                  <br>
+                  <div class="subheader">Настройки аутентификации</div>
+                  <div class="input-group" id="auth-group">
+                      <label for="Auth_Name">Веб логин</label>
+                      <input id="Auth_Name" name="Auth_Name" length=32 placeholder="Имя пользователя для аутентификации">
+                  </div>
+                  <div class="input-group" id="auth-group">
+                      <label for="Auth_Pass">Веб пароль</label>
+                      <input id="Auth_Pass" name="Auth_Pass" length=32 placeholder="Пароль для аутентификации">
+                  </div>
+                  <div class="input-group" id="auth-group">
+                    <label for="useHttps">Использовать HTTPS</label>
+                    <div class="switch">
+                      <input id="useHttps" type="checkbox">
+                      <label title="Использовать HTTPS для доступа к приложению" class="slider" for="useHttps"></label>
+                    </div>
+                  </div>
+                  <div class="input-group" id="auth-group">
+                    <label for="useSecure">Проверять Сертификаты</label>
+                    <div class="switch">
+                      <input id="useSecure" type="checkbox">
+                      <label title="Проверять сертификат удаленных серверов" class="slider" for="useSecure"></label>
+                    </div>
+                  </div>
+                </div>
+                <br><br>
+              </nav>
+              <div id="foot-spacer"></div>
+            </div>
+          </div>
+          <section id="footer">
+            <div class="info-group center">
+                <label for="fw_version">Версия</label>
+                <div id="fw_version" class="info displayonly">&nbsp;</div>
+            </div>
+            <div class="info-group center">
+                <label for="llevel">Окружающий&nbsp;Свет</label>
+                <div id="llevel" class="info displayonly">&nbsp;</div>
+            </div>
+            <div class="info-group center">
+                <label for="night">Ночное&nbsp;Время</label>
+                <div id="night" class="info displayonly">&nbsp;</div>
+            </div>
+            <div class="info-group center">
+                <label for="atemp">Температура&nbsp;Камеры</label>
+                <div id="atemp" class="info displayonly">&nbsp;</div>
+            </div>
+            <div class="info-group center">
+                <label for="battv">Напряжение&nbsp;Батареи</label>
+                <div id="battv" class="info displayonly">&nbsp;</div>
+            </div>
+            <div class="info-group center">
+                <label for="clock">&nbsp;Местное&nbsp;время&nbsp;камеры</label>
+                <div id="clock" class="info displayonly">&nbsp;</div>
+            </div>
+            <div class="info-group center">
+                <label for="up_time">Время&nbsp;работы</label>
+                <div id="up_time" class="info displayonly">&nbsp;</div>
+            </div>
+            <div class="info-group center">
+                <label for="wifi_rssi">Сила&nbsp;Сигнала</label>
+                <div id="wifi_rssi" class="info displayonly">&nbsp;</div>
+            </div>
+            <div class="info-group center">
+                <label for="free_heap">Свободная&nbsp;память</label>
+                <div id="free_heap" class="info displayonly">&nbsp;</div>
+            </div>
+            <div class="info-group center">
+                <label for="free_psram">Свободная&nbsp;PSRAM</label>
+                <div id="free_psram" class="info displayonly">&nbsp;</div>
+            </div>
+            <div class="info-group center">
+                <label for="free_bytes">Бесплатно СД</label>
+                <div id="free_bytes" class="info displayonly">&nbsp;</div>
+            </div>
+            <div class="info-group center">
+                <label for="total_bytes">Всего&nbsp;SD</label>
+                <div id="total_bytes" class="info displayonly">&nbsp;</div>
+            </div>
+          </section>
+        </div>
+      </div>
+    </div>
+    <div id="ShowLog" class="tabcontent">
+      <br>
+      <div class="grid-cols4">
+        <div class="input-group" style="grid-column: span 2; grid-row: span 2">
+          <fieldset>
+          <legend id="selectLog">Выбрать Лог</legend>
+          <div>
+            <label title="Показать лог RTC RAM" for="rtcram">РТК ОЗУ</label>
+            <input class="local" id="rtcram" type="radio" name="logType" value="0" checked>
+            <label title="Показать лог Websocket" for="websock">&nbsp;Вебсокет</label>
+            <input class="local" id="websock" type="radio" name="logType" value="1">
+            <label title="Показать лог SD карты" for="sdcard">&nbsp;SD Карта</label>
+            <input class="local" id="sdcard" type="radio" name="logType" value="2">
+          </div>
+          </fieldset>
+        </div>
+        <div class="input-group" id="dbg-group" style="text-align: left">
+          <label for="dbgVerbose" class="header" title="Установить подробное логирование">Подробно:</label>
+        </div>
+        <div class="input-group" id="dbg-group" style="text-align: right">
+          <div class="switch">
+            <input id="dbgVerbose" type="checkbox">
+            <label title="Выводить дополнительную информацию в лог" class="slider" for="dbgVerbose"></label>
+          </div>
+        </div>
+        <div class="input-group" id="dbg-group" style="text-align: left">
+          <label for="sdLog" class="header" title="Включить логирование на SD карту">Войти на SD:</label>
+        </div>
+        <div class="input-group" id="dbg-group" style="text-align: right">
+          <div class="switch">
+            <input id="sdLog" type="checkbox">
+            <label title="Выводить лог на SD карту" class="slider" for="sdLog"></label>
+          </div> 
+        </div>
+        <div style="grid-column: span 4"><br></div>
+        <div>
+          <svg>
+            <rect class="buttonRect" tabindex="0"/>
+            <text class="local" id="refreshLog">Обновить Лог</text>
+          </svg>
+        </div>
+        <div>
+          <svg>
+            <rect class="buttonRect" tabindex="0"/>
+            <text class="local" id="clearLog">Очистить Лог</text>
+          </svg>
+        </div>
+        <div>
+          <svg>
+            <rect class="buttonRect" tabindex="0"/>
+            <text id="save" class="midText">Сохранить</text>
+          </svg>
+        </div>
+        <div>
+          <svg>
+            <rect class="buttonRect" tabindex="0"/>
+            <text id="reset" class="midText">Перезагрузить ESP</text>
+          </svg>
+        </div>
+      </div>
+      <br>
+      <div id="appLog"></div>
+      <br>
+    </div>
+    <div id="EditConfig" class="tabcontent">
+      <br>
+          <div class="header">Управление</div>
+          <br>
+          <div class="grid-cols4">
+        <div>
+          <svg>
+            <rect class="buttonRect" tabindex="0"/>
+            <text id="save" class="midText">Сохранить</text>
+          </svg>
+        </div>
+        <div>
+          <svg>
+            <rect class="buttonRect" tabindex="0"/>
+            <text id="reset" class="midText">Перезагрузить ESP</text>
+          </svg>
+        </div>
+        <div>
+          <svg>
+            <rect class="buttonRect" tabindex="0"/>
+            <text id="deldata" class="midText">Перезагрузить /data</text>
+          </svg>
+        </div>
+        <div>
+          <svg>
+            <rect class="buttonRect" tabindex="0"/>
+            <text id="clear" class="midText">Очистить NVS</text>
+          </svg>
+        </div>
+        <div class="cfgTitle">
+          <br>
+          <div class="header">Настройки</div>
+          <div class="subheader">Нажмите кнопку для просмотра или изменения настроек (измененные значения не проверяются)</div>
+          <div class="subheader">Нажмите кнопку Сохранить, чтобы сделать изменения постоянными</div>
+          <br>
+        </div>
+        <div>
+          <svg>
+            <rect class="buttonRect" tabindex="0"/>
+            <text class="local midText" id="wifi">Сеть</text>
+          </svg>
+        </div>
+        <div>
+          <svg>
+            <rect class="buttonRect" tabindex="0"/>
+            <text class="local midText" id="peripherals">Периферия</text>
+          </svg>
+        </div>
+        <div id="RCconfigBtn" class="hidden">
+          <svg>
+            <rect class="buttonRect" tabindex="0"/>
+            <text class="local midText" id="RCconfig">Настройка пульта дистанционного управления</text>
+          </svg>
+        </div>
+        <div id="SVconfigBtn" class="hidden">
+          <svg>
+            <rect class="buttonRect" tabindex="0"/>
+            <text class="local midText" id="SVconfig">Сервоприводы</text>
+          </svg>
+        </div>
+        <div id="PGconfigBtn" class="hidden">
+          <svg>
+            <rect class="buttonRect" tabindex="0"/>
+            <text class="local midText" id="PGconfig">Управление ФГ</text>
+          </svg>
+        </div>
+      </div>
+      <div>
+        <p class='config-group' id='Cfg'></p>
+      </div>
+    </div>
+    <div class="alertMsg">
+      <span id="alertText"></span>
+    </div>
+    <script>
+      'используйте строгий'
+      let refreshInterval = 5000;
+      let heartbeatInterval = 5000;
+      let cameraModel = "Auxil";
+      let firstCall = true;
+      let appClock = Math.ceil(Date.now() / 1000);
+      let sustainId = "1";
+      const appLogInit = 0;
+      let RCmode = false;
+      let showRC = false;
+      let wsInd = 0;
+      let maxSteerAngle = 45;
+      let maxDutyCycle = 100;
+      let minDutyCycle = 10;
+      let allowReverse = true;
+      let autoControl = true;
+      let servoCenter = 90;
+      let waitTime = 20;
+      function appInit() {
+      }
+      async function processStatus(dest, key, value, fromUser = true) {
+        if (dest == ID) {
+          if (key == "wifi") getConfig("0");
+          else if (key == "hostName") {
+            document.title = value;
+            if (fromUser) sendControl(key, value);
+          }
+          else if (key == "clearLog") clearLog();
+          else if (key == "refreshLog") getLog();
+          else if (key == "logType") { logType = value; sendControl(key, value); return; }
+          else if (key == "refreshVal") refreshInterval = value * 1000;
+          else if (key == "heartbeatRC") heartbeatInterval = value * 1000;
+          else if (key == "clockUTC") { appClock = value; checkTime(value); }
+          else if (key == "peripherals") getConfig("0123");
+          else if (key == "RCconfig") { doLoadStatus = false; getConfig("01234"); }
+          else if (key == "SVconfig") { doLoadStatus = false; getConfig("0123456"); }
+          else if (key == "PGconfig") { doLoadStatus = false; getConfig("012345"); }
+          else if (key == "delete" || key == "uploadMove" || key == "upload") sdFile(key, value);
+          else if (key == 'timezoneSel') fromUser = setTz(value);
+          else if (key == "RCactive") Number(value) ? show($('#RCconfigBtn')) : hide($('#RCconfigBtn'));
+          else if (key == "maxSteerAngle") updateMaxSteerAngle(value);
+          else if (key == "maxDutyCycle") updateMaxDutyCycle(value);
+          else if (key == "minDutyCycle") minDutyCycle = value;
+          else if (key == "servoCenter") servoCenter = value;
+          else if (key == "allowReverse") { allowReverse = value > 0 ? true : false; updateMaxDutyCycle(maxDutyCycle, true); }
+          else if (key == "autoControl") autoControl = value > 0 ? true : false;
+          else if (key == "PGactive") Number(value) ? show($('#PGconfigBtn')) : hide($('#PGconfigBtn'));
+          else if (key == "SVactive") Number(value) ? show($('#SVconfigBtn')) : hide($('#SVconfigBtn'));
+          else if (key == "waitTime") waitTime = value;
+          else if (key == "AtakePhotos") { if (fromUser) wsAuxSend(wsInd, "G1"); }
+          else if (key == "BabortPhotos") { if (fromUser) wsAuxSend(wsInd, "G0"); }
+          else if (key == 'save') await sleep(600); // разрешить последний ввод для устранения дребезга
+          if (fromUser && !$('#'+key).classList.contains("local")) debounceSendControl(key, value);
+        }
+        else if (dest == CLASS) {
+          if (key.substring(0, 9) == "quick-nav") navigation(value);
+          else if (key == "pin-menu") pinMenu();
+        }
+      }
+      function changeRange(id, min, max, val, isX = false) {
+        const range = $('#'+id);
+        range.min = min;
+        range.max = max;
+        range.value = val;
+        range.parentElement.children.rangeMin.innerHTML = isX ? (parseInt(min)+1)+'x' : min;
+        range.parentElement.children.rangeMax.innerHTML = isX ? (parseInt(max)+1)+'x' : max;
+      }
+      function navigation(key) {
+        const i = $('#'+key);
+        const m = $('#'+i.getAttribute('name'));
+        i.classList.toggle('active');
+        $$('nav.quick-nav:not(#'+i.id+')').forEach(el => {el.classList.remove('active')});
+        m.classList.toggle('active');
+        $$('nav.panel:not(#'+m.id+')').forEach(el => {el.classList.remove('active')});
+        m.querySelector('.menu-action').checked = isActive(i);
+        if (isActive(i)) {
+          $('#селектор меню').classList.remove('menu-closed');
+          $('#селектор меню').classList.add('menu-open');
+        } else {
+          $('#селектор меню').classList.add('menu-closed');
+          $('#селектор меню').classList.remove('menu-open');
+        }
+      }
+      function pinMenu() {
+        if ($('#меню-контейнер').classList.contains('menu-pinned')) {
+          $$('.menu-pinned').forEach(el => {
+            el.classList.remove('menu-pinned');
+            el.classList.add('menu-floating');
+          });
+        } else {
+          $$('.menu-floating').forEach(el => {
+            el.classList.remove('menu-floating');
+            el.classList.add('menu-pinned');
+          });
+        }
+      }
+      function sendAll(key, val) {
+        sendControl(key, val);
+        if (wsSkt[0] != null) wsSkt[0].send('C' + key + '=' + val);
+      }
+      function configStatus(refresh) {}
+      function closedTab(isClosed) {}
+      function updateMaxSteerAngle(val) {
+        if (maxSteerAngle != val) maxSteerAngle = val;
+      }
+      function updateMaxDutyCycle(val, force = false) {
+        if (maxDutyCycle != val || force) maxDutyCycle = val;
+      }
+      function wsAuxSend(index, msg) {
+        if (wsSkt[index] && wsSkt[index].readyState === WebSocket.OPEN) wsSkt[wsInd].send(msg);
+        else alert("Потеряно соединение с " + wsServers[wsInd]);
+      }
+      const doCustomInit = false;
+      const doInitWebSocket = true;
+      let doLoadStatus = true;
+      const doRefreshTimer = false;
+      const doCustomSync = false;
+      const doHeartbeat = false;
+      const scriptFiles = ['/web?common.js', 'C:/MyStuff/Arduino/CommonMaster/Latest/common.js'];
+      for (let i = 0; i < scriptFiles.length; i++) {
+        const scriptElement = document.createElement('script');
+        scriptElement.src = scriptFiles[i];
+        document.body.appendChild(scriptElement);
+      }
+      window.addEventListener('load', function() {
+        initialise();
+        appInit();
+      });
+    </script>
+  </body>
+</html>
